@@ -1,0 +1,42 @@
+name: Check
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v30
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.31.2/install
+      - name: Run flake checks
+        run: nix flake check
+      - name: Verify zerobox evaluates on Linux
+        run: |
+          if nix eval .#lib.x86_64-linux --apply 'lib: lib.mkSandboxedHarness "claude-code" { backend = lib.backends.zerobox; }' >/dev/null 2>&1; then
+            echo "PASS: zerobox evaluates on Linux"
+          else
+            echo "FAIL: zerobox should evaluate on Linux"
+            exit 1
+          fi
+
+  check-darwin:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v30
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.31.2/install
+      - name: Run flake checks
+        run: nix flake check
+      - name: Verify zerobox platform guard rejects Darwin
+        run: |
+          if nix eval .#lib.aarch64-darwin --apply 'lib: lib.mkSandboxedHarness "claude-code" { backend = lib.backends.zerobox; }' 2>/dev/null; then
+            echo "FAIL: zerobox should fail on Darwin"
+            exit 1
+          else
+            echo "PASS: zerobox correctly rejected on Darwin"
+          fi
