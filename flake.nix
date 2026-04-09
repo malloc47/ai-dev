@@ -189,15 +189,15 @@
               # 4. Nono-backed claude-code builds and wrapper calls nono run
               nono-claude = assertWrapperContains "nono-claude" "claude-code" {
                 backend = ai.backends.nono;
-              } "exec nono run";
+              } "/bin/nono run";
 
               # 5. Nono-backed opencode builds and wrapper calls nono run
               nono-opencode = assertWrapperContains "nono-opencode" "opencode" {
                 backend = ai.backends.nono;
-              } "exec nono run";
+              } "/bin/nono run";
 
               # 6. Default backend produces a nono wrapper
-              default-backend-is-nono = assertWrapperContains "default-backend" "claude-code" { } "exec nono run";
+              default-backend-is-nono = assertWrapperContains "default-backend" "claude-code" { } "/bin/nono run";
 
               # 7. Profile merging: write paths from profiles appear in wrapper
               profiles-merged = assertWrapperContains "profiles-merged" "claude-code" {
@@ -247,32 +247,36 @@
                 backend = ai.backends.nono;
               } "--allow-cwd";
 
-              # 13. Default nono wrapper does not block network
-              #     (defaults.allowedDomains is non-empty → allowNet is a
-              #     non-empty list → nono allows network)
+              # 13. Default nono wrapper uses --allow-domain (not --block-net)
+              #     because defaults.allowedDomains is a non-empty domain list
               nono-net-allowed = pkgs.runCommand "check-nono-net" { } ''
                 drv="${ai.mkSandboxedHarness "claude-code" { backend = ai.backends.nono; }}"
-                if grep -qF -- '--net-block' "$drv"/bin/*; then
+                if grep -qF -- '--block-net' "$drv"/bin/*; then
                   echo "FAIL: default config should not block network"
                   exit 1
                 fi
                 touch $out
               '';
+
+              # 14. Default nono wrapper includes --allow-domain for per-domain filtering
+              nono-domain-filtering = assertWrapperContains "nono-domains" "claude-code" {
+                backend = ai.backends.nono;
+              } "--allow-domain";
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               # -- Build tests: zerobox backend (Linux only) --
 
-              # 14. Zerobox-backed claude builds and wrapper calls zerobox
+              # 15. Zerobox-backed claude builds and wrapper calls zerobox
               zerobox-claude = assertWrapperContains "zerobox-claude" "claude-code" {
                 backend = ai.backends.zerobox;
               } "exec zerobox";
 
-              # 15. Zerobox wrapper includes symlink resolver
+              # 16. Zerobox wrapper includes symlink resolver
               zerobox-symlinks = assertWrapperContains "zerobox-symlinks" "claude-code" {
                 backend = ai.backends.zerobox;
               } "resolve_symlinks";
 
-              # 16. Zerobox wrapper includes NixOS system paths
+              # 17. Zerobox wrapper includes NixOS system paths
               zerobox-nixos-paths = assertWrapperContains "zerobox-nixos" "claude-code" {
                 backend = ai.backends.zerobox;
               } "/run/current-system";

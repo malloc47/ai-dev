@@ -13,6 +13,7 @@ let
 in
 interface.mkBackend {
   name = "zerobox";
+  package = zerobox;
   supportedPlatforms = [
     "x86_64-linux"
     "aarch64-linux"

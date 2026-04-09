@@ -4,7 +4,6 @@
 # macOS Keychain access is handled via nono's --secrets flag.
 #
 # Limitations vs zerobox:
-# - No per-domain network filtering (--net-block is all-or-nothing)
 # - No --env flag; environment is inherited from the parent shell
 { pkgs }:
 let
@@ -13,9 +12,11 @@ let
   # nono uses --read/--write/--allow (not --allow-read/--allow-write)
   mkReadFlags = paths: builtins.concatStringsSep " " (map (p: ''--read "${p}"'') paths);
   mkWriteFlags = paths: builtins.concatStringsSep " " (map (p: ''--allow "${p}"'') paths);
+  mkDomainFlags = domains: builtins.concatStringsSep " " (map (d: ''--allow-domain "${d}"'') domains);
 in
 interface.mkBackend {
   name = "nono";
+  package = pkgs.nono;
   supportedPlatforms = [
     "x86_64-linux"
     "aarch64-linux"
@@ -30,17 +31,24 @@ interface.mkBackend {
       packages ? [ ],
       allowRead ? [ ],
       allowWrite ? [ ],
-      # nono has no per-domain filtering.  true = allow network (default);
-      # [] or list = block all network via --net-block.
+      # true = unrestricted network; [] = block all; ["domain" ...] = allow only listed domains.
       allowNet ? [ ],
       env ? { },
     }:
     let
       pathStr = pkgs.lib.makeBinPath (packages ++ [ pkg ]);
 
-      # Network: nono only supports all-or-nothing.
-      # allowNet == true or non-empty list → allow; [] → block.
-      netFlag = if allowNet == true || allowNet != [ ] then "" else "--net-block";
+      # Network flags:
+      # allowNet == true → no flags (unrestricted)
+      # allowNet == []   → --block-net (no network)
+      # allowNet == [domains...] → --allow-domain per domain (proxy filters)
+      netFlags =
+        if allowNet == true then
+          ""
+        else if allowNet == [ ] then
+          "--block-net"
+        else
+          mkDomainFlags allowNet;
 
       # Environment variables: nono inherits the parent environment, so we
       # export them in the wrapper script before exec.
@@ -53,7 +61,6 @@ interface.mkBackend {
     pkgs.writeShellApplication {
       name = outName;
       runtimeInputs = [
-        pkgs.nono
         pkgs.coreutils
       ];
       text = ''
@@ -72,7 +79,7 @@ interface.mkBackend {
         ${envExports}
 
         # shellcheck disable=SC2086
-        exec nono run \
+        exec ${pkgs.nono}/bin/nono run \
           --allow-cwd \
           --allow "$REAL_TMPDIR" \
           --allow /tmp \
@@ -81,7 +88,7 @@ interface.mkBackend {
           --read /nix/var \
           ${mkWriteFlags allowWrite} \
           ${mkReadFlags allowRead} \
-          ${netFlag} \
+          ${netFlags} \
           --exec \
           -- ${pkg}/bin/${binName} "$@"
       '';
