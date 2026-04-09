@@ -2,7 +2,7 @@
 
 Portable subflake with two independent layers:
 
-1. **Sandbox layer** (`programs.ai-sandbox`): installs unwrapped `claude-code` and `opencode`; exposes `lib` helpers for per-project sandboxing via [agent-sandbox.nix](https://github.com/archie-judd/agent-sandbox.nix).
+1. **Sandbox layer** (`programs.ai-sandbox`): installs unwrapped `claude-code` and `opencode`; exposes `lib` helpers for per-project sandboxing with pluggable backends (nono, zerobox, passthrough).
 2. **Session layer** (`programs.ai-session`): installs `agent-deck`, `zellij-ai`, and `zellij` for multi-agent orchestration. Runs outside any sandbox — launches whatever `claude`/`opencode` is on `$PATH`.
 
 ## System-level install
@@ -130,7 +130,7 @@ mkSandboxedHarness "claude-code" {
 
 **`profiles`** — the built-in profile set, for use with `with ai.profiles; [ github python ]`.
 
-**`mkSandbox`** — re-export of `agent-sandbox.lib.${system}.mkSandbox` for full control.
+**`mkSandbox`** — the active backend's sandbox function, for full control.
 
 **`sandboxPackages`** / **`allowedDomains`** — the default lists, for inspection or extension.
 
