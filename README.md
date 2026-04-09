@@ -67,7 +67,7 @@ Or add a `flake.nix` manually:
 }
 ```
 
-Then `nix develop` gives you sandboxed `claude` and `opencode` scoped to that project. On Linux, agents run inside a bubblewrap sandbox with network filtering. On Darwin, agents run unwrapped (bubblewrap is Linux-only). Orchestration tools (agent-deck, zellij-ai) are installed system-wide via the session layer and run outside the sandbox.
+Then `nix develop` gives you sandboxed `claude` and `opencode` scoped to that project. Agents run inside a nono sandbox (Landlock on Linux, Seatbelt on macOS) with per-domain network filtering. On Linux, the zerobox backend (bwrap+seccomp) is also available. Orchestration tools (agent-deck, zellij-ai) are installed system-wide via the session layer and run outside the sandbox.
 
 ### Harnesses
 
@@ -102,14 +102,15 @@ Profiles bundle packages, domains, and state paths for a tool ecosystem:
 mkProjectShell {
   harnesses ? [ "claude-code" "opencode" ];
   profiles ? [];               # composable tool profiles
-  restrictNetwork ? true;      # network deny-by-default
+  unrestrictedNetwork ? false; # true = allow all network; false = domain allowlist
   unrestrictedHarness ? false; # --dangerously-skip-permissions for claude
-  extraDomains ? [];           # domains to add to the allowlist
-  extraPackages ? [];          # packages available inside the sandbox
-  extraStateDirs ? [];         # additional read-write directories (also passed as --add-dir to claude)
-  extraStateFiles ? [];        # additional read-write files
-  extraEnv ? {};               # environment variables passed into the sandbox
-  extraShellPackages ? [];     # packages added to the devShell (outside sandbox)
+  domains ? [];                # domains to add to the allowlist
+  packages ? [];               # packages available inside the sandbox
+  allowWrite ? [];             # additional read-write directories (also passed as --add-dir to claude)
+  allowRead ? [];              # additional read-only paths
+  env ? {};                    # environment variables passed into the sandbox
+  shellPackages ? [];          # packages added to the devShell (outside sandbox)
+  backend ? null;              # sandbox backend override (default: nono)
 }
 ```
 
@@ -118,13 +119,14 @@ mkProjectShell {
 ```nix
 mkSandboxedHarness "claude-code" {
   profiles ? [];
-  restrictNetwork ? true;
+  unrestrictedNetwork ? false;
   unrestrictedHarness ? false;
-  extraDomains ? [];
-  extraPackages ? [];
-  extraStateDirs ? [];
-  extraStateFiles ? [];
-  extraEnv ? {};
+  domains ? [];
+  packages ? [];
+  allowWrite ? [];
+  allowRead ? [];
+  env ? {};
+  backend ? null;
 }
 ```
 

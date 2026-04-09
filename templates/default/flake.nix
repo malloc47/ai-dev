@@ -25,9 +25,9 @@
               github
               # Add more: python, node, rust, aws, docker, nix
             ];
-            # extraDomains = [ ];
-            # extraPackages = [ ];
-            # extraAllowWrite = [ ];
+            # domains = [ ];
+            # packages = [ ];
+            # allowWrite = [ ];
             # unrestrictedHarness = false;
           };
         }

@@ -18,11 +18,11 @@
     # Returns the pkg, possibly wrapped with extra CLI flags before sandboxing.
     mkWrappedPkg =
       {
-        extraWritePaths ? [ ],
+        writePaths ? [ ],
         unrestricted ? false,
       }:
       let
-        addDirFlags = map (d: "--add-dir ${d}") extraWritePaths;
+        addDirFlags = map (d: "--add-dir ${d}") writePaths;
         permFlags = if unrestricted then [ "--dangerously-skip-permissions" ] else [ ];
         allFlags = addDirFlags ++ permFlags;
       in
@@ -46,7 +46,7 @@
 
     mkWrappedPkg =
       {
-        extraWritePaths ? [ ],
+        writePaths ? [ ],
         unrestricted ? false,
       }:
       agents.opencode;

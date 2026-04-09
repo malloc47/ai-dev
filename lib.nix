@@ -43,7 +43,7 @@ let
         packages = [ ];
         mkWrappedPkg =
           {
-            extraWritePaths ? [ ],
+            writePaths ? [ ],
             unrestricted ? false,
           }:
           h;
@@ -54,10 +54,10 @@ let
     harnessSpec:
     {
       profiles ? [ ],
-      extraDomains ? [ ],
-      extraPackages ? [ ],
-      extraAllowWrite ? [ ],
-      extraAllowRead ? [ ],
+      domains ? [ ],
+      packages ? [ ],
+      allowWrite ? [ ],
+      allowRead ? [ ],
       env ? { },
       # true = unrestricted network; false = restrict to domain allowlist.
       unrestrictedNetwork ? false,
@@ -70,13 +70,13 @@ let
       harness = resolveHarness harnessSpec;
       merged = mergeProfiles profiles;
 
-      allAllowWrite = harness.allowWrite ++ merged.allowWrite ++ extraAllowWrite;
-      allAllowRead = merged.allowRead ++ extraAllowRead;
-      allDomains = defaults.allowedDomains ++ harness.domains ++ merged.domains ++ extraDomains;
-      allPackages = defaults.sandboxPackages ++ harness.packages ++ merged.packages ++ extraPackages;
+      allAllowWrite = harness.allowWrite ++ merged.allowWrite ++ allowWrite;
+      allAllowRead = merged.allowRead ++ allowRead;
+      allDomains = defaults.allowedDomains ++ harness.domains ++ merged.domains ++ domains;
+      allPackages = defaults.sandboxPackages ++ harness.packages ++ merged.packages ++ packages;
 
       wrappedPkg = harness.mkWrappedPkg {
-        extraWritePaths = extraAllowWrite;
+        writePaths = allowWrite;
         unrestricted = unrestrictedHarness;
       };
     in
@@ -98,27 +98,28 @@ let
         "opencode"
       ],
       profiles ? [ ],
-      extraDomains ? [ ],
-      extraPackages ? [ ],
-      extraAllowWrite ? [ ],
-      extraAllowRead ? [ ],
+      domains ? [ ],
+      packages ? [ ],
+      allowWrite ? [ ],
+      allowRead ? [ ],
       env ? { },
-      extraShellPackages ? [ ],
+      shellPackages ? [ ],
       unrestrictedNetwork ? false,
       unrestrictedHarness ? false,
       # Sandbox backend function.  null = use the flake-level default.
       backend ? null,
     }:
     let
+      activeBackend = if backend != null then backend else mkSandboxUpstream;
       sandboxedBinaries = map (
         h:
         mkSandboxedHarness h {
           inherit
             profiles
-            extraDomains
-            extraPackages
-            extraAllowWrite
-            extraAllowRead
+            domains
+            packages
+            allowWrite
+            allowRead
             env
             unrestrictedNetwork
             unrestrictedHarness
@@ -126,9 +127,14 @@ let
             ;
         }
       ) harnesses;
+      backendToolPackages =
+        if activeBackend ? package && activeBackend.package != null then
+          [ activeBackend.package ]
+        else
+          [ ];
     in
     pkgs.mkShell {
-      packages = sandboxedBinaries ++ extraShellPackages;
+      packages = sandboxedBinaries ++ backendToolPackages ++ shellPackages;
     };
 
 in
