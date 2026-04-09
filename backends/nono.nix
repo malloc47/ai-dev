@@ -1,28 +1,18 @@
-# nono backend: Landlock (Linux) / Seatbelt (macOS) sandboxing with
-# Layer 7 endpoint filtering and credential proxy.
+# nono backend: Landlock (Linux) / Seatbelt (macOS) sandboxing.
 #
 # Uses the nono package from nixpkgs.  Supports all platforms.
-# macOS support includes credential proxy for Keychain access.
+# macOS Keychain access is handled via nono's --secrets flag.
+#
+# Limitations vs zerobox:
+# - No per-domain network filtering (--net-block is all-or-nothing)
+# - No --env flag; environment is inherited from the parent shell
 { pkgs }:
 let
   interface = import ./interface.nix { inherit pkgs; };
 
-  # nono CLI flag generation helpers
-  mkReadFlags = paths: builtins.concatStringsSep " " (map (p: ''--allow-read "${p}"'') paths);
-  mkWriteFlags = paths: builtins.concatStringsSep " " (
-    map (p: ''--allow-write "${p}" --allow-read "${p}"'') paths
-  );
-  mkNetFlags =
-    allowNet:
-    if allowNet == true then
-      "--allow-net"
-    else
-      builtins.concatStringsSep " " (map (d: ''--allow-net "${d}"'') allowNet);
-  mkEnvFlags =
-    env:
-    builtins.concatStringsSep " " (
-      map (name: ''--env "${name}=${builtins.toJSON env.${name}}"'') (builtins.attrNames env)
-    );
+  # nono uses --read/--write/--allow (not --allow-read/--allow-write)
+  mkReadFlags = paths: builtins.concatStringsSep " " (map (p: ''--read "${p}"'') paths);
+  mkWriteFlags = paths: builtins.concatStringsSep " " (map (p: ''--allow "${p}"'') paths);
 in
 interface.mkBackend {
   name = "nono";
@@ -40,12 +30,25 @@ interface.mkBackend {
       packages ? [ ],
       allowRead ? [ ],
       allowWrite ? [ ],
+      # nono has no per-domain filtering.  true = allow network (default);
+      # [] or list = block all network via --net-block.
       allowNet ? [ ],
       env ? { },
     }:
     let
       pathStr = pkgs.lib.makeBinPath (packages ++ [ pkg ]);
-      closurePaths = pkgs.writeClosure (packages ++ [ pkg ]);
+
+      # Network: nono only supports all-or-nothing.
+      # allowNet == true or non-empty list → allow; [] → block.
+      netFlag = if allowNet == true || allowNet != [ ] then "" else "--net-block";
+
+      # Environment variables: nono inherits the parent environment, so we
+      # export them in the wrapper script before exec.
+      envExports = builtins.concatStringsSep "\n" (
+        map (name: ''export ${name}=${pkgs.lib.escapeShellArg (builtins.toJSON env.${name})}'') (
+          builtins.attrNames env
+        )
+      );
     in
     pkgs.writeShellApplication {
       name = outName;
@@ -54,9 +57,7 @@ interface.mkBackend {
         pkgs.coreutils
       ];
       text = ''
-        CWD=$(pwd)
-
-        # Ensure paths exist (skip files that already exist)
+        # Ensure directories exist (skip paths that are already files)
         ${builtins.concatStringsSep "\n" (
           map (p: ''if [ ! -f "${p}" ]; then mkdir -p "${p}"; fi'') allowWrite
         )}
@@ -64,34 +65,24 @@ interface.mkBackend {
           map (p: ''if [ ! -f "${p}" ]; then mkdir -p "${p}"; fi'') allowRead
         )}
 
-        # Build --allow-read flags for nix store closure
-        CLOSURE_READ_FLAGS=""
-        while IFS= read -r storePath; do
-          CLOSURE_READ_FLAGS="$CLOSURE_READ_FLAGS --allow-read $storePath"
-        done < ${closurePaths}
-
         REAL_TMPDIR="''${TMPDIR:-/tmp}"
 
+        # Set PATH and any extra env vars before entering the sandbox
+        export PATH="${pathStr}"
+        ${envExports}
+
         # shellcheck disable=SC2086
-        exec nono \
-          --allow-read "$CWD" \
-          --allow-write "$CWD" \
-          --allow-read /etc \
-          --allow-read /nix/store \
-          --allow-read /nix/var \
-          --allow-read "$REAL_TMPDIR" \
-          --allow-write "$REAL_TMPDIR" \
-          --allow-read /tmp \
-          --allow-write /tmp \
-          $CLOSURE_READ_FLAGS \
+        exec nono run \
+          --allow-cwd \
+          --allow "$REAL_TMPDIR" \
+          --allow /tmp \
+          --read /etc \
+          --read /nix/store \
+          --read /nix/var \
           ${mkWriteFlags allowWrite} \
           ${mkReadFlags allowRead} \
-          ${mkNetFlags allowNet} \
-          ${mkEnvFlags env} \
-          --env "PATH=${pathStr}" \
-          --env "HOME=$HOME" \
-          --env "TERM=$TERM" \
-          --env "TMPDIR=$REAL_TMPDIR" \
+          ${netFlag} \
+          --exec \
           -- ${pkg}/bin/${binName} "$@"
       '';
     };

@@ -186,26 +186,26 @@
 
               # -- Build tests: nono backend (all platforms) --
 
-              # 4. Nono-backed claude-code builds and wrapper calls nono
+              # 4. Nono-backed claude-code builds and wrapper calls nono run
               nono-claude = assertWrapperContains "nono-claude" "claude-code" {
                 backend = ai.backends.nono;
-              } "exec nono";
+              } "exec nono run";
 
-              # 5. Nono-backed opencode builds and wrapper calls nono
+              # 5. Nono-backed opencode builds and wrapper calls nono run
               nono-opencode = assertWrapperContains "nono-opencode" "opencode" {
                 backend = ai.backends.nono;
-              } "exec nono";
+              } "exec nono run";
 
               # 6. Default backend produces a nono wrapper
-              default-backend-is-nono = assertWrapperContains "default-backend" "claude-code" { } "exec nono";
+              default-backend-is-nono = assertWrapperContains "default-backend" "claude-code" { } "exec nono run";
 
-              # 7. Profile merging: github+python domains appear in wrapper
+              # 7. Profile merging: write paths from profiles appear in wrapper
               profiles-merged = assertWrapperContains "profiles-merged" "claude-code" {
                 profiles = [
                   ai.profiles.github
                   ai.profiles.python
                 ];
-              } "pypi.org";
+              } ".cache/pip";
 
               # 8. Passthrough returns the original package (no wrapper)
               passthrough-claude = pkgs.runCommand "check-passthrough-claude" { } ''
@@ -237,20 +237,27 @@
                 touch $out
               '';
 
-              # 11. Nono wrapper includes closure read flags loop
-              nono-closure-flags = assertWrapperContains "nono-closure" "claude-code" {
+              # 11. Nono wrapper includes --exec for interactive apps
+              nono-exec-flag = assertWrapperContains "nono-exec" "claude-code" {
                 backend = ai.backends.nono;
-              } "CLOSURE_READ_FLAGS";
+              } "--exec";
 
-              # 12. Nono wrapper includes default allowed domains
-              nono-default-domains = assertWrapperContains "nono-domains" "claude-code" {
+              # 12. Nono wrapper includes --allow-cwd
+              nono-allow-cwd = assertWrapperContains "nono-cwd" "claude-code" {
                 backend = ai.backends.nono;
-              } "api.anthropic.com";
+              } "--allow-cwd";
 
-              # 13. unrestrictedNetwork produces bare --allow-net flag
-              unrestricted-net = assertWrapperContains "unrestricted-net" "claude-code" {
-                unrestrictedNetwork = true;
-              } "--allow-net";
+              # 13. Default nono wrapper does not block network
+              #     (defaults.allowedDomains is non-empty → allowNet is a
+              #     non-empty list → nono allows network)
+              nono-net-allowed = pkgs.runCommand "check-nono-net" { } ''
+                drv="${ai.mkSandboxedHarness "claude-code" { backend = ai.backends.nono; }}"
+                if grep -qF -- '--net-block' "$drv"/bin/*; then
+                  echo "FAIL: default config should not block network"
+                  exit 1
+                fi
+                touch $out
+              '';
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               # -- Build tests: zerobox backend (Linux only) --
