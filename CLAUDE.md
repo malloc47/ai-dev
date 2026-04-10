@@ -72,7 +72,8 @@ The `checks` flake output contains build-time assertions. When adding a new back
 ## Nono CLI reference
 
 Correct flags (not the same as zerobox):
-- Filesystem: `--read`, `--allow` (read-write), `--allow-cwd`
-- Network: `--block-net` (block all), `--allow-domain <domain>` (per-domain filtering)
-- Execution: `--exec` (required for interactive/TTY apps), `nono run`
+- Filesystem: `--read`, `--allow` (read-write), `--allow-cwd`, `--allow-file`, `--read-file`
+- Network: `--block-net` (block all), `--allow-domain <domain>` (per-domain filtering), `--network-profile <name>`
+- Profiles: `--profile <name>` (built-in: `claude-code`, `codex`, `opencode`, `developer`, `minimal`)
 - No `--env` flag — environment is inherited from the parent shell
+- Supervised mode is the default; no `--exec` flag needed for interactive/TTY apps

@@ -237,12 +237,7 @@
                 touch $out
               '';
 
-              # 11. Nono wrapper includes --exec for interactive apps
-              nono-exec-flag = assertWrapperContains "nono-exec" "claude-code" {
-                backend = ai.backends.nono;
-              } "--exec";
-
-              # 12. Nono wrapper includes --allow-cwd
+              # 11. Nono wrapper includes --allow-cwd
               nono-allow-cwd = assertWrapperContains "nono-cwd" "claude-code" {
                 backend = ai.backends.nono;
               } "--allow-cwd";

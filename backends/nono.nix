@@ -90,7 +90,6 @@ interface.mkBackend {
           ${mkWriteFlags allowWrite} \
           ${mkReadFlags allowRead} \
           ${netFlags} \
-          --exec \
           -- ${pkg}/bin/${binName} "$@"
       '';
     };
