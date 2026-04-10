@@ -1,12 +1,13 @@
 # nono backend: Landlock (Linux) / Seatbelt (macOS) sandboxing.
 #
-# Uses the nono package from nixpkgs.  Supports all platforms.
+# Uses a pinned nono package built from pkgs/nono.nix.
 # macOS Keychain access is handled via nono's --secrets flag.
 #
 # Limitations vs zerobox:
 # - No --env flag; environment is inherited from the parent shell
 { pkgs }:
 let
+  nono = pkgs.callPackage ../pkgs/nono.nix { };
   interface = import ./interface.nix { inherit pkgs; };
 
   # nono uses --read/--write/--allow (not --allow-read/--allow-write)
@@ -16,7 +17,7 @@ let
 in
 interface.mkBackend {
   name = "nono";
-  package = pkgs.nono;
+  package = nono;
   supportedPlatforms = [
     "x86_64-linux"
     "aarch64-linux"
@@ -79,7 +80,7 @@ interface.mkBackend {
         ${envExports}
 
         # shellcheck disable=SC2086
-        exec ${pkgs.nono}/bin/nono run \
+        exec ${nono}/bin/nono run \
           --allow-cwd \
           --allow "$REAL_TMPDIR" \
           --allow /tmp \
