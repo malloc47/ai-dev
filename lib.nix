@@ -39,6 +39,7 @@ let
         binName = h.pname or h.name;
         outName = h.pname or h.name;
         allowWrite = [ ];
+        allowWriteFiles = [ ];
         domains = [ ];
         packages = [ ];
         mkWrappedPkg =
@@ -71,6 +72,7 @@ let
       merged = mergeProfiles profiles;
 
       allAllowWrite = harness.allowWrite ++ merged.allowWrite ++ allowWrite;
+      allAllowWriteFiles = (harness.allowWriteFiles or [ ]);
       allAllowRead = merged.allowRead ++ allowRead;
       allDomains = defaults.allowedDomains ++ harness.domains ++ merged.domains ++ domains;
       allPackages = defaults.sandboxPackages ++ harness.packages ++ merged.packages ++ packages;
@@ -85,6 +87,7 @@ let
       inherit (harness) binName outName;
       packages = allPackages;
       allowWrite = allAllowWrite;
+      allowWriteFiles = allAllowWriteFiles;
       allowRead = allAllowRead;
       allowNet = if unrestrictedNetwork then true else allDomains;
       inherit env;

@@ -13,6 +13,7 @@ let
   # nono uses --read/--write/--allow (not --allow-read/--allow-write)
   mkReadFlags = paths: builtins.concatStringsSep " " (map (p: ''--read "${p}"'') paths);
   mkWriteFlags = paths: builtins.concatStringsSep " " (map (p: ''--allow "${p}"'') paths);
+  mkWriteFileFlags = paths: builtins.concatStringsSep " " (map (p: ''--allow-file "${p}"'') paths);
   mkDomainFlags = domains: builtins.concatStringsSep " " (map (d: ''--allow-domain "${d}"'') domains);
 in
 interface.mkBackend {
@@ -32,6 +33,7 @@ interface.mkBackend {
       packages ? [ ],
       allowRead ? [ ],
       allowWrite ? [ ],
+      allowWriteFiles ? [ ],
       # true = unrestricted network; [] = block all; ["domain" ...] = allow only listed domains.
       allowNet ? [ ],
       env ? { },
@@ -88,6 +90,7 @@ interface.mkBackend {
           --read /nix/store \
           --read /nix/var \
           ${mkWriteFlags allowWrite} \
+          ${mkWriteFileFlags allowWriteFiles} \
           ${mkReadFlags allowRead} \
           ${netFlags} \
           -- ${pkg}/bin/${binName} "$@"

@@ -39,12 +39,16 @@
     "registry.npmjs.org"
   ];
 
-  # Writable paths for Claude Code
+  # Writable directories for Claude Code
   claudeWritePaths = [
     ".claude"
     ".config/claude"
     "$HOME/.claude"
     "$HOME/.config/claude"
+  ];
+
+  # Writable files for Claude Code
+  claudeWriteFiles = [
     "$HOME/.claude.json"
     "$HOME/.claude.json.lock"
   ];

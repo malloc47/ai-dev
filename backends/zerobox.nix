@@ -26,18 +26,21 @@ interface.mkBackend {
       packages ? [ ],
       allowRead ? [ ],
       allowWrite ? [ ],
+      allowWriteFiles ? [ ],
       # Domain allowlist.  true = unrestricted network; [] = no network.
       allowNet ? [ ],
       env ? { },
     }:
     let
+      # zerobox --allow-write handles both files and directories
+      allWritePaths = allowWrite ++ allowWriteFiles;
       # Nix store closure for all packages so zerobox can exec binaries.
       closurePaths = pkgs.writeClosure (packages ++ [ pkg ]);
 
       # --allow-write implies --allow-read in zerobox, but we pass both
       # explicitly so the intent is clear when debugging wrapper scripts.
       writeFlags = builtins.concatStringsSep " " (
-        map (p: ''--allow-write "${p}" --allow-read "${p}"'') allowWrite
+        map (p: ''--allow-write "${p}" --allow-read "${p}"'') allWritePaths
       );
       readFlags = builtins.concatStringsSep " " (map (p: ''--allow-read "${p}"'') allowRead);
 
@@ -67,7 +70,7 @@ interface.mkBackend {
 
         # Ensure paths exist (skip files that already exist)
         ${builtins.concatStringsSep "\n" (
-          map (p: ''if [ ! -f "${p}" ]; then mkdir -p "${p}"; fi'') allowWrite
+          map (p: ''if [ ! -f "${p}" ]; then mkdir -p "${p}"; fi'') allWritePaths
         )}
         ${builtins.concatStringsSep "\n" (
           map (p: ''if [ ! -f "${p}" ]; then mkdir -p "${p}"; fi'') allowRead
@@ -112,8 +115,8 @@ interface.mkBackend {
 
         # Resolve symlinks for all configured paths
         SYMLINK_FLAGS=""
-        ${pkgs.lib.optionalString (allowWrite != [ ]) ''
-          for p in ${builtins.concatStringsSep " " (map (p: ''"${p}"'') allowWrite)}; do
+        ${pkgs.lib.optionalString (allWritePaths != [ ]) ''
+          for p in ${builtins.concatStringsSep " " (map (p: ''"${p}"'') allWritePaths)}; do
             if [ -e "$p" ]; then
               resolve_symlinks "$p" write
             fi

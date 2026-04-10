@@ -20,6 +20,7 @@ interface.mkBackend {
       packages ? [ ],
       allowRead ? [ ],
       allowWrite ? [ ],
+      allowWriteFiles ? [ ],
       allowNet ? [ ],
       env ? { },
     }:

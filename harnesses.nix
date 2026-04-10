@@ -12,6 +12,7 @@
     binName = "claude";
     outName = "claude";
     allowWrite = defaults.claudeWritePaths;
+    allowWriteFiles = defaults.claudeWriteFiles;
     domains = [ ];
     packages = [ ];
 
@@ -41,6 +42,7 @@
     binName = "opencode";
     outName = "opencode";
     allowWrite = defaults.opencodeWritePaths;
+    allowWriteFiles = [ ];
     domains = [ ];
     packages = [ ];
 
