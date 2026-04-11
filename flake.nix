@@ -1,5 +1,5 @@
 {
-  description = "AI coding tools with per-project sandboxing helpers and session orchestration.";
+  description = "AI coding tools with per-project sandboxing helpers.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -34,15 +34,6 @@
           agents = llm-agents.packages.${system};
           defaults = import ./defaults.nix { inherit pkgs; };
 
-          # Zellij wrapper with config.kdl baked in via store path.
-          zellij-ai = pkgs.writeShellApplication {
-            name = "zellij-ai";
-            runtimeInputs = [ pkgs.zellij ];
-            text = ''
-              exec zellij --config ${./zellij-config.kdl} "$@"
-            '';
-          };
-
           # Per-project sandboxing: harness+profile system with pluggable backends.
           # Each backend returns a validated mkSandbox function via mkBackend.
           backends = {
@@ -68,7 +59,6 @@
         in
         {
           packages = {
-            inherit zellij-ai;
             claude-code = agents.claude-code;
             opencode = agents.opencode;
             agent-deck = agents.agent-deck;
@@ -78,8 +68,6 @@
                 agents.claude-code
                 agents.opencode
                 agents.agent-deck
-                zellij-ai
-                pkgs.zellij
               ];
             };
           };
@@ -89,11 +77,9 @@
               agents.claude-code
               agents.opencode
               agents.agent-deck
-              zellij-ai
-              pkgs.zellij
             ];
             shellHook = ''
-              echo "ai-dev environment ready. Try: claude, opencode, agent-deck, zellij-ai"
+              echo "ai-dev environment ready. Try: claude, opencode, agent-deck"
             '';
           };
 
@@ -110,13 +96,9 @@
               type = "app";
               program = "${agents.agent-deck}/bin/agent-deck";
             };
-            zellij-ai = {
-              type = "app";
-              program = "${zellij-ai}/bin/zellij-ai";
-            };
             default = {
               type = "app";
-              program = "${zellij-ai}/bin/zellij-ai";
+              program = "${agents.claude-code}/bin/claude";
             };
           };
 
@@ -301,12 +283,8 @@
       };
 
       homeManagerModules = {
-        # Installs both layers — convenience for hosts that want everything
-        default = import ./home-manager.nix { inherit self; };
-        # Sandbox layer: raw claude-code + opencode
+        default = import ./sandbox.nix { inherit self; };
         sandbox = import ./sandbox.nix { inherit self; };
-        # Session layer: agent-deck + zellij-ai
-        session = import ./session.nix { inherit self; };
       };
     };
 }

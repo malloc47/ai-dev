@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Nix flake providing AI coding tools (claude-code, opencode) with per-project sandboxing via pluggable backends, plus session orchestration (agent-deck, zellij-ai). Consumed by `github:malloc47/config` and `github:malloc47/work-config` as a flake input.
+Nix flake providing AI coding tools (claude-code, opencode) with per-project sandboxing via pluggable backends. Consumed as a flake input by downstream configuration repos.
 
 ## Commands
 
@@ -28,9 +28,7 @@ nix eval .#lib.aarch64-darwin --apply 'lib: lib.mkSandboxedHarness "claude-code"
 
 ## Architecture
 
-Two independent layers:
 - **Sandbox layer** (`programs.ai-sandbox`): installs claude-code and opencode; exposes `lib` for per-project sandboxing
-- **Session layer** (`programs.ai-session`): installs agent-deck, zellij-ai, zellij for multi-agent orchestration (runs outside sandbox)
 
 ### Composition flow
 

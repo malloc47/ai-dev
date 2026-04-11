@@ -1,9 +1,6 @@
 # ai-dev
 
-Portable subflake with two independent layers:
-
-1. **Sandbox layer** (`programs.ai-sandbox`): installs unwrapped `claude-code` and `opencode`; exposes `lib` helpers for per-project sandboxing with pluggable backends (nono, zerobox, passthrough).
-2. **Session layer** (`programs.ai-session`): installs `agent-deck`, `zellij-ai`, and `zellij` for multi-agent orchestration. Runs outside any sandbox — launches whatever `claude`/`opencode` is on `$PATH`.
+Portable subflake for per-project AI agent sandboxing. Installs `claude-code` and `opencode` via `programs.ai-sandbox`; exposes `lib` helpers for sandboxing with pluggable backends (nono, zerobox, passthrough).
 
 ## System-level install
 
@@ -16,23 +13,8 @@ inputs.ai-dev.url = "github:malloc47/ai-dev";
 
 ```nix
 # home-manager config
-imports = [ inputs.ai-dev.homeManagerModules.default ];  # imports both layers
-
+imports = [ inputs.ai-dev.homeManagerModules.default ];
 programs.ai-sandbox.enable = true;  # claude-code, opencode
-programs.ai-session.enable = true;  # agent-deck, zellij-ai, zellij
-```
-
-Or import layers individually:
-
-```nix
-imports = [ inputs.ai-dev.homeManagerModules.sandbox ];
-programs.ai-sandbox.enable = true;
-```
-
-```nix
-imports = [ inputs.ai-dev.homeManagerModules.session ];
-programs.ai-session.enable = true;
-# programs.ai-session.installXdgZellijConfig = true;  # opt-in: write to ~/.config/zellij/
 ```
 
 ### Non-NixOS Linux / standalone nix
@@ -67,7 +49,7 @@ Or add a `flake.nix` manually:
 }
 ```
 
-Then `nix develop` gives you sandboxed `claude` and `opencode` scoped to that project. Agents run inside a nono sandbox (Landlock on Linux, Seatbelt on macOS) with per-domain network filtering. On Linux, the zerobox backend (bwrap+seccomp) is also available. Orchestration tools (agent-deck, zellij-ai) are installed system-wide via the session layer and run outside the sandbox.
+Then `nix develop` gives you sandboxed `claude` and `opencode` scoped to that project. Agents run inside a nono sandbox (Landlock on Linux, Seatbelt on macOS) with per-domain network filtering. On Linux, the zerobox backend (bwrap+seccomp) is also available.
 
 ### Harnesses
 
@@ -148,12 +130,3 @@ mkSandboxedHarness "claude-code" {
 
 coreutils, git, ripgrep, fd, gnused, gnugrep, findutils, jq, which, nodejs, curl, openssh, diffutils, patch, gnutar, gzip
 
-## Remote Zellij web access
-
-`zellij-ai` starts a web server on `127.0.0.1:8082`. To reach it from another machine:
-
-```bash
-ssh -L 8082:localhost:8082 <host>
-ssh <host> zellij-ai web --create-token dev
-# then browse http://localhost:8082
-```
